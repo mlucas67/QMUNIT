@@ -1,0 +1,203 @@
+$catalog TestCase local
+**
+* A test case defines the fixture to run multiple tests. To define a test case<br/>
+* <ol>
+*   <li>implement a subclass of <code>TestCase</code></li>
+*   <li>define instance variables that store the state of the fixture</li>
+*   <li>initialize the fixture state by overriding @link #setUp()end</li>
+*   <li>clean-up after a test by overriding @link #tearDown()end.</li>
+* </ol>
+* Each test runs in its own fixture so there
+* can be no side effects among test runs.
+* Here is an example:
+* <pre>
+* public class MathTest extends TestCase 
+*    protected double fValue1
+*    protected double fValue2
+*
+*    protected sub setUp() 
+*       fValue1= 2.0
+*       fValue2= 3.0
+*    end
+* end
+* </pre>
+*
+* For each test implement a method which interacts
+* with the fixture. Verify the expected results with assertions specified
+* by calling @link junit.framework.Assert#assertTrue(String, boolean)end with a boolean.
+* <pre>
+*    public sub testAdd() 
+*       double result= fValue1 + fValue2
+*       assertTrue(result == 5.0)
+*    end
+* </pre>
+*
+* Once the methods are defined you can run them. The framework supports
+* both a static type safe and more dynamic way to run a test.
+* In the static way you override the runTest method and define the method to
+* be invoked. A convenient way to do so is with an anonymous inner class.
+* <pre>
+* TestCase test= new MathTest("add") 
+*    public sub runTest() 
+*       testAdd()
+*    end
+* end
+* test.run()
+* </pre>
+* The dynamic way uses reflection to implement @link #runTest()end. It dynamically finds
+* and invokes a method.
+* In this case the name of the test case has to correspond to the test method
+* to be run.
+* <pre>
+* TestCase test= new MathTest("testAdd")
+* test.run()
+* </pre>
+*
+* The tests to be run can be collected into a TestSuite. JUnit provides
+* different <i>test runners</i> which can run a test suite and collect the results.
+* A test runner either expects a static method <code>suite</code> as the entry
+* point to get a test to run or it will extract the suite automatically.
+* <pre>
+* public static Test suite() 
+*    suite.addTest(new MathTest("testAdd"))
+*    suite.addTest(new MathTest("testDivideByZero"))
+*    return suite
+* end
+* </pre>
+*
+* @see TestResult
+* @see TestSuite
+**
+class TestCase inherits QMAssert
+    $include SYSCOM KEYS.H
+    **
+    * the name of the test case
+    **
+    private fName
+
+    **
+    * No-arg constructor to enable serialization. This method
+    * is not intended to be used by mere mortals without calling setName().
+    **
+    public sub create.object(name='') var.args 
+        fName = name
+    end
+
+    **
+    * Counts the number of test cases executed by run(TestResult result).
+    **
+    public function countTestCases() 
+        return 1
+    end
+
+    **
+    * Creates a default TestResult object
+    *
+    * @see TestResult
+    **
+    public function createResult() 
+        return object("TestResult")
+    end
+
+    **
+    * Runs the test case and collects the results in TestResult.
+    *
+    * @see TestResult
+    **
+    public function run(this, result='') var.args
+        if (vartype(result) # VT$OBJ) then result = me->createResult()
+        result->run(this)
+        return result
+    end
+
+    **
+    * Runs the bare test sequence.
+    *
+    * @throws Throwable if any exception is thrown
+    **
+    public sub runBare(this)
+        exception = ''
+        this->setUp()
+        try 
+            me->runTest(this)
+        catch "Running" 
+            exception = "Running"
+        end 
+        try 
+            this->tearDown()
+        catch "tearingDown"
+            if (exception = '') then exception = "tearingDown"
+        end
+        if (exception # '') then throw exception
+    end
+
+    **
+    * Override to run the test and assert its state.
+    *
+    * @throws Throwable if any exception is thrown
+    **
+    public sub runTest(this)
+        me->assertNotNull("TestCase.fName cannot be null", fName)
+        runMethod = ''
+        try 
+            runMethod = me->getMethod(fName, this)
+        catch "NoSuchMethodException"
+            me->fail('Method "' : fName : '" not found')
+        end
+
+        this->(runMethod)()
+    end
+
+    **
+    * Sets up the fixture, for example, open a network connection.
+    * This method is called before a test is executed.
+    **
+    public sub setUp()
+    end
+
+    **
+    * Tears down the fixture, for example, close a network connection.
+    * This method is called after a test is executed.
+    **
+    public sub tearDown()
+    end
+
+    **
+    * Returns a string representation of the test case
+    **
+    public function toString() 
+        return me->getName()
+    end
+
+    **
+    * Gets the name of a TestCase
+    *
+    * @return the name of the TestCase
+    **
+    public function getName() 
+        return fName
+    end
+
+    **
+    * Sets the name of a TestCase
+    *
+    * @param name the name to set
+    **
+    public sub setName(name) 
+        fName = name
+    end
+    
+    **
+    * Checks a method against annotations stored on compiled object to
+    * see if it has been declared as a test.
+    **
+    public function getMethod(method, obj)
+        if (vartype(obj) # VT$OBJ) then throw "NoSuchMethodException"
+        className = objinfo(obj, 1)
+        call !findprog(result, className)
+        substr = "Test(name=" : dquote(method)
+        if (index(result, substr, 1) = 0) then throw "NoSuchMethodException"
+        return method
+    end
+end
+

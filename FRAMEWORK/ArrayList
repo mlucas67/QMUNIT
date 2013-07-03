@@ -1,0 +1,72 @@
+$catalog ArrayList local
+class ArrayList
+
+    private array(10)
+    private size
+    
+    public sub create.object()
+        mat array = ''
+        size = 0
+    end
+    
+    public sub add(elem)
+        size += 1
+        if (size > inmat(array)) then redim array(size+9)
+        array(size) = elem
+    end
+    
+    public sub foreach(method, ...)
+        for i = 1 to size
+            obj = array(i)
+            begin case
+                case (arg.count() = 1)
+                    if (objinfo(obj, 0)) then 
+                        obj->(method)() 
+                    end else 
+                        call @method(obj)
+                    end
+                case (arg.count() = 2)
+                    if (objinfo(obj, 0)) then 
+                        obj->(method)(arg(2)) 
+                    end else 
+                        call @method(obj, arg(2))
+                    end
+                case (arg.count() = 3)
+                    if (objinfo(obj, 0)) then 
+                        obj->(method)(arg(2), arg(3)) 
+                    end else 
+                        call @method(obj, arg(2), arg(3))
+                    end
+                case (arg.count() = 4)
+                    if (objinfo(obj, 0)) then 
+                        obj->(method)(arg(2), arg(3), arg(4)) 
+                    end else 
+                        call @method(obj, arg(2), arg(3), arg(4))
+                    end
+            end case
+        next i
+    end
+    
+    public sub remove(elem)
+        for i = 1 to size
+            if (objinfo(elem, 0)) then
+                if (objinfo(elem, 1) = objinfo(array(i), 1)) then
+                    for j = i+1 to size
+                        array(j-1) = array(j)
+                    next j
+                    array(size) = ''
+                    size -= 1
+                end
+            end else
+                if (elem = array(i)) then
+                    for j = i+1 to size
+                        array(j-1) = array(j)
+                    next j
+                    array(size) = ''
+                    size -= 1
+                end
+            end
+        next i
+    end
+
+end

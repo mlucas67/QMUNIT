@@ -1,0 +1,146 @@
+$catalog TestResult local
+**
+* A <code>TestResult</code> collects the results of executing
+* a test case. It is an instance of the Collecting Parameter pattern.
+* The test framework distinguishes between <i>failures</i> and <i>errors</i>.
+* A failure is anticipated and checked for with assertions. Errors are
+* unanticipated problems like an {@link ArrayIndexOutOfBoundsException}.
+*
+* @see Test
+**
+class TestResult
+    private fFailures
+    private fErrors
+    private fListeners
+    private fRunTests
+    private fStop
+
+    public sub create.object()
+        fFailures = object("ArrayList")
+        fErrors = object("ArrayList")
+        fListeners = object("ArrayList")
+        fRunTests = 0
+        fStop = @false
+    end
+
+    **
+    * Adds an error to the list of errors. The passed in exception
+    * caused the error.
+    **
+    public sub addError(test, t)
+        fErrors->add(object("TestFailure", test, t))
+        fListeners->foreach("addError", test, t)
+    end
+
+    **
+    * Adds a failure to the list of failures. The passed in exception
+    * caused the failure.
+    **
+    public sub addFailure(test, t)
+        fFailures->add(object("TestFailure", test, t))
+        fListeners->foreach("addFailure", test, t)
+    end
+
+    **
+    * Registers a TestListener
+    **
+    public sub addListener(listener)
+        fListeners->add(listener)
+    end
+
+    **
+    * Unregisters a TestListener
+    **
+    public sub removeListener(listener)
+        fListeners->remove(listener)
+    end
+
+    **
+    * Informs the result that a test was completed.
+    **
+    public sub endTest(test)
+        fListeners->foreach("endTest", test)
+    end
+
+    **
+    * Gets the number of detected errors.
+    **
+    public function errorCount()
+        return fErrors->size()
+    end
+
+    **
+    * Returns an Enumeration for the errors
+    **
+    public function errors()
+        return fErrors
+    end
+
+
+    **
+    * Gets the number of detected failures.
+    **
+    public function failureCount()
+        return fFailures->size()
+    end
+
+    **
+    * Returns an Enumeration for the failures
+    **
+    public function failures()
+        return fFailures
+    end
+
+    **
+    * Runs a TestCase.
+    **
+    public sub run(test)
+        me->startTest(test)
+        try
+            test->runBare(test)
+        catch "AssertionFailedError"
+            me->addFailure(test, object("Exception"))
+        catch SYS$ANY
+            me->addError(test, object("Exception"))
+        end
+        me->endTest(test)
+    end
+
+    **
+    * Gets the number of run tests.
+    **
+    public function runCount() 
+        return fRunTests
+    end
+
+    **
+    * Checks whether the test run should stop
+    **
+    public function shouldStop()
+        return fStop
+    end
+
+    **
+    * Informs the result that a test will be started.
+    **
+    public sub startTest(test)
+        count = test->countTestCases()
+        fRunTests += count
+        fListeners->foreach("startTest", test)
+    end
+
+    **
+    * Marks that the test run should stop.
+    **
+    public sub stop()
+        fStop = @true
+    end
+
+    **
+    * Returns whether the entire test was successful or not.
+    **
+    public function wasSuccessful() 
+        return ((me->failureCount() = 0) & (me->errorCount() = 0))
+    end
+
+end

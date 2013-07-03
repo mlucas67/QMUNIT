@@ -1,0 +1,174 @@
+$catalog QMAssert local no.query
+**
+* A set of assert methods.  Messages are only displayed when an assert fails.
+**
+class QMAssert 
+    $include SYSCOM KEYS.H
+    **
+    * Asserts that a condition is true. If it isn't it throws
+    * an AssertionFailedError with the given message.
+    **
+    public sub assertTrue(condition, message='') var.args
+        if (not(condition)) then
+            me->fail(message)
+        end
+    end
+
+    **
+    * Asserts that a condition is false. If it isn't it throws
+    * an AssertionFailedError with the given message.
+    **
+    public sub assertFalse(condition, message='') var.args 
+        me->assertTrue(not(condition), message);
+    end
+
+    **
+    * Fails a test with the given message.
+    **
+    public sub fail(message='') var.args
+        if (message = '') then
+            throw "AssertionFailedError"
+        end
+        throw "AssertionFailedError", message
+    end
+
+    **
+    * Asserts that two objects are equal. If they are not
+    * an AssertionFailedError is thrown with the given message.
+    **
+    public sub assertEqual(expected, actual, message='') var.args
+        begin case
+            case (vartype(expected) = VT$UNASSIGNED)
+                if (vartype(actual) = VT$UNASSIGNED) then return
+            case (vartype(expected) = VT$INTEGER)
+                if (vartype(actual) = VT$INTEGER) then
+                    if (expected = actual) then return
+                end
+            case (vartype(expected) = VT$FLOATNUM)
+                if (vartype(actual) = VT$FLOATNUM) then
+                    if (expected = actual) then return
+                end
+            case (vartype(expected) =  VT$SUBR)
+                if (vartype(actual) = VT$SUBR) then
+                    if (expected = actual) then return
+                end
+            case (vartype(expected) = VT$STRING)
+                if (vartype(actual) = VT$STRING) then
+                    if (expected = actual) then return
+                end
+            case (vartype(expected) = VT$FILE.REF)
+                if (vartype(actual) = VT$FILE.REF) then
+                    if (fileinfo(expected, FL$VOCNAME) = fileinfo(actual, FL$VOCNAME)) then
+                        return
+                    end
+                end
+            case (vartype(expected) = VT$IMAGE)
+                if (vartype(actual) = VT$IMAGE) then return
+            case (vartype(expected) = VT$SELLIST)
+                if (vartype(actual) = VT$SELLIST) then
+                    if (expected = actual) then return
+                end
+            case (vartype(expected) = VT$SOCK)
+                if (vartype(actual) = VT$SOCK) then
+                    for i = SKT$INFO.OPEN to SKT$INFO.PEER.PORT
+                        if (socket.info(expected, i) # socket.info(actual, i)) then exit
+                    next i
+                    if (i > SKT$INFO.PEER.PORT) then return
+                end
+            case (vartype(expected) = VT$OBJ)
+                if (vartype(actual) = VT$OBJ) then
+                    try
+                        if expected->equal(actual) then return
+                    catch SYS.PROGRAM.INVALID_OBJECT_REFERENCE
+                    end
+                 end
+            case (vartype(expected) = VT$FILEWAIT)
+                if (vartype(actual) = VT$FILEWAIT) then
+                end
+        end case
+        me->failNotEquals(expected, actual, message)
+    end
+
+    **
+    * Asserts that an isn't null. If it is
+    * an AssertionFailedError is thrown with the given message.
+    **
+    public sub assertNotNull(obj, message='') var.args
+        if (vartype(obj) = VT$STRING) then
+            if (obj # '') then return
+        end
+        if (vartype(obj) # VT$UNASSIGNED) then return
+        me->fail(message)
+    end
+
+    **
+    * Asserts that an is null.  If it is not
+    * an AssertionFailedError is thrown with the given message.
+    **
+    public sub assertNull(obj, message='') var.args
+        if (vartype(obj) = VT$UNASSIGNED) then return
+        if (vartype(obj) = VT$STRING) then
+            if (obj = '') then return
+        end
+        me->fail(message)
+    end
+
+    **
+    * Asserts that two objects refer to the same type of object. If they are not
+    * an AssertionFailedError is thrown with the given message.
+    **
+    public sub assertSame(expected, actual, message='') var.args
+        begin case
+            case (vartype(expected) = VT$OBJ)
+                if (vartype(actual) = VT$OBJ) then
+                    if (objinfo(expected, 1) = objinfo(actual, 1)) then return
+                    try
+                        me->failNotSame(expected->toString(), actual->toString(), message)
+                    catch SYS.PROGRAM.INVALID_OBJECT_REFERENCE
+                        me->failNotSame(objinfo(expected, 1), objinfo(actual, 1), message)
+                    end
+                end
+                me->failNotSame("object=":objinfo(expected, 1), actual, message)
+            case (vartype(expected) = vartype(actual))
+                return
+        end case
+        me->failNotSame(expected, actual, message)
+    end
+
+    **
+    * Asserts that two objects do not refer to the same object. If they do
+    * refer to the same an AssertionFailedError is thrown with the
+    * given message.
+    **
+    public sub assertNotSame(expected, actual, message='') var.args
+        begin case
+            case (vartype(expected) = VT$OBJ)
+                if (vartype(actual) = VT$OBJ) then
+                    if (objinfo(expected, 1) # objinfo(actual, 1)) then return
+                end
+            case (vartype(expected) # vartype(actual))
+                return
+        end case
+        me->failSame(message)
+    end
+
+    public sub failSame(message='') var.args
+        formatted = if (message # '') then message : " " else ""
+        me->fail(formatted : "expected not same");
+    end
+
+    public sub failNotSame(expected, actual, message='') var.args
+        formatted = if (message # '') then message : " " else ""
+        me->fail(formatted : "expected same:<" : expected : "> was not:<" : actual : ">");
+    end
+
+    public sub failNotEqual(expected, actual, message='') var.args
+        me->fail(me->format(expected, actual, message))
+    end
+
+    public function format(expected, actual, message='') var.args
+        formatted = if (message # '') then message : " " else ""
+        return (formatted : "expected:<" : expected : "> but was:<" : actual : ">")
+    end
+end
+

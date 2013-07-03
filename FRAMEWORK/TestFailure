@@ -1,0 +1,59 @@
+$catalog TestFailure local
+**
+* A <code>TestFailure</code> collects a failed test together with
+* the caught exception.
+*
+* @see TestResult
+**
+class TestFailure
+    $include SYSCOM KEYS.H
+    
+    private fFailedTest
+    private fThrownException
+
+    **
+    * Constructs a TestFailure with the given test and exception.
+    **
+    public sub create.object(failedTest, thrownException)
+        fFailedTest = failedTest
+        fThrownException = thrownException
+    end
+
+    **
+    * Gets the failed test.
+    **
+    public function failedTest()
+        return fFailedTest
+    end
+
+    **
+    * Gets the thrown exception.
+    */
+    public function thrownException()
+        return fThrownException
+    end
+
+    **
+    * Returns a short description of the failure.
+    **
+    public function toString()
+        buffer = fFailedTest : ": " : fThrownException->getMessage()
+        return buffer
+    end
+
+    public function trace()
+        return fThrownException->getStackTrace()
+    end
+
+    public function exceptionMessage()
+        return fThrownException->getMessage()
+    end
+
+    public function isFailure()
+        if (vartype(fThrownException) = VT$OBJ) then
+            return (fThrownException->getName() = "AssertionFailedError")
+        end
+        return @false
+    end
+    
+end

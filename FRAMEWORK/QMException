@@ -1,0 +1,52 @@
+$catalog QMException global
+class QMException
+
+    private exceptionName
+    private exceptionData
+    private exceptionOrigin
+    private stackTrace
+    
+    public sub create.object()
+        exceptionName = @EXCEPTION
+        exceptionOrigin = @EXCEPTION.ORIGIN
+        if (index(@EXCEPTION.DATA, "$CPROC", 1) = 0) then
+            exceptionData = @EXCEPTION.DATA
+            stackTrace = system(1002)
+        end else
+            stackTrace = @EXCEPTION.DATA
+            exceptionData = ''
+        end
+    end
+    
+    public function toString()
+        return exceptionName : @fm : exceptionOrigin : @fm : lower(exceptionData) : @fm : lower(stackTrace)
+    end
+    
+    public sub printStackTrace()
+        crt "Exception " : exceptionName : " thrown by " :
+        trace = me->getStackTrace()
+        for each line in trace
+            crt line
+        next line
+    end
+    
+    public function getStackTrace()
+        trace = exceptionOrigin<1> : " at line " : exceptionOrigin<2>
+        levels = dcount(stackTrace, @fm)
+        for l = 1 to levels
+            name = stackTrace<l,1>
+            line = stackTrace<l,2,2>
+            trace<-1> = "    from " : name : " at line " : line
+        next l
+        return trace
+    end
+    
+    public function getName()
+        return exceptionName
+    end
+    
+    public function getMessage()
+        return exceptionData
+    end
+
+end
